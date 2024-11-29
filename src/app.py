@@ -16,17 +16,17 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Layout
 app.layout = html.Div([
-    dcc.Interval(id='update-interval', interval=15000000, n_intervals=0),  # Update every 5 seconds
-    html.H1("Gambina Cup", style={"text-align": "center", "font-size":"30px"}),
+    dcc.Interval(id='update-interval', interval=3000, n_intervals=0),  # Update every 5 seconds
+    html.H1("Ottelut", style={"text-align": "center", "font-size":"30px"}),
 
     # Games list
     html.Div(id="games-list", style={"margin": "20px"}),
 
     html.H2("Standings", style={"margin-top": "40px"}),
-    html.Div(id="standings-table", style={"margin": "20px"}),
+    html.Div(id="standings-table", style={"text-align":"center","margin": "5px"}),
 
-    html.H2("Points Leaders", style={"margin-top": "40px"}),
-    html.Div(id="points-leaders-table", style={"margin": "20px"}),
+    html.H2("Pistepörssi", style={"margin-top": "20px"}),
+    html.Div(id="points-leaders-table", style={"text-align":"center","margin": "5px"}),
 ])
 
 # Callback to update all data
@@ -38,6 +38,8 @@ app.layout = html.Div([
 )
 def update_data(n):
     # Generate games list
+    data.refresh_data()
+
     games_list = []
     live = data.get_live()
     games_list.append(layouts.get_games_elements(live))
@@ -55,11 +57,12 @@ def update_data(n):
     # )
 
     # # Generate points leaders table
-    # points_leaders_table = dbc.Table.from_dataframe(
-    #     points_leaders_df, striped=False, bordered=False, hover=True, style={"margin": "10px"}
-    # )
+    points = data.render_points()
+    points_leaders_table = dbc.Table.from_dataframe(
+        points, striped=False, bordered=False, hover=True, style={"margin": "10px"}
+    )
 
-    return games_list, [], []
+    return games_list, [], [points_leaders_table]
 
 
 # Run the app

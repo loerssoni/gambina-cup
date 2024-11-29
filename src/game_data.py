@@ -90,6 +90,8 @@ def get_players(goals, teams):
     players = players.join(points_data, on='Player')
     players[points_data.columns] = players[points_data.columns].fillna(0)
     players = players.merge(teams, left_on='Team', right_on='Joukkue', how='inner')
+    players['Joukkue'] = players.Player + '\n(' + players.Joukkue + ')'
+
     return players
 
 def scoreboard_standings(scoreboard, standings, teams):
@@ -100,7 +102,7 @@ def scoreboard_standings(scoreboard, standings, teams):
     scoreboard['record_home'] = '(' + scoreboard['win_home'].astype(int).astype(str) + ' - ' + scoreboard['loss_home'].astype(int).astype(str) + ' - ' + scoreboard['tie_home'].astype(int).astype(str) + ')'
     scoreboard['record_away'] = '(' + scoreboard['win_away'].astype(int).astype(str) + ' - ' + scoreboard['loss_away'].astype(int).astype(str) + ' - ' + scoreboard['tie_away'].astype(int).astype(str) + ')'
     scoreboard['record_h2h'] = '(' + scoreboard['win_home'].astype(int).astype(str) + ' - ' + scoreboard['win_away'].astype(int).astype(str) + ')'
-    scoreboard['record_h2h'] = np.select([scoreboard.SARJA.str.endswith('lohko').values], [['' for i in range(len(scoreboard))]], scoreboard.record_home)
+    scoreboard['record_h2h'] = np.select([scoreboard.SARJA.str.endswith('lohko').values], [['' for i in range(len(scoreboard))]], scoreboard.record_h2h)
     scoreboard['record_home'] = np.select([scoreboard.SARJA.str.endswith('lohko')], [scoreboard.record_home], '')
     scoreboard['record_away'] = np.select([scoreboard.SARJA.str.endswith('lohko')], [scoreboard.record_away], ['' for i in range(len(scoreboard))])
     
@@ -125,7 +127,7 @@ class GameData():
 
     
     def render_scoreboard(self, scoreboard):
-        render_cols = ['SARJA','playercard_home','playercard_away',
+        render_cols = ['SARJA','KOTI','VIERAS',
                 'AREENA', 'score', 'Joukkue_KOTI', 'Joukkue_VIERAS',
                 'record_home','record_away', 'record_h2h', 'game_state']
         return scoreboard[render_cols].to_dict(orient='records')
@@ -142,3 +144,8 @@ class GameData():
         scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'TULOSSA')].iloc[:2]
         return self.render_scoreboard(scoreboard)
     
+
+    def render_points(self):
+        output = self.players[['Player', 'goal_scorers', 'assists', 'points', 'Joukkue']]
+        output.columns = ['Pelaaja','Maalit','Syötöt','Pisteet', 'Joukkue']
+        return output
