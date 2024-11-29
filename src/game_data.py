@@ -1,6 +1,6 @@
 import pandas as pd
+import numpy as np
 
-# from sheets import read_data, schedule_sheets_update, request_game_data
 import sheets
 
 def read_players():
@@ -42,6 +42,7 @@ def get_scoreboard(games, goals):
                     (row['VIERAS'] if row['VIERAS_SCORE'] > row['KOTI_SCORE'] else 'TIE'), 
         axis=1
     )
+
     return scoreboard
 
 def get_standings(scoreboard):    # Transform to long-form and count victories as before
@@ -91,9 +92,26 @@ def get_players(goals, teams):
     players = players.merge(teams, left_on='Team', right_on='Joukkue', how='inner')
     return players
 
+def scoreboard_standings(scoreboard, standings, teams):
+    scoreboard = scoreboard \
+            .merge(standings, left_on=['KOTI', 'series'], right_on=['team','series'])\
+            .merge(standings, left_on=['VIERAS', 'series'], right_on=['team','series'], suffixes=('_home','_away'))
+    scoreboard['score'] = scoreboard['KOTI_SCORE'].astype(int).astype(str) + ' - ' + scoreboard['VIERAS_SCORE'].astype(int).astype(str)
+    scoreboard['record_home'] = '(' + scoreboard['win_home'].astype(int).astype(str) + ' - ' + scoreboard['loss_home'].astype(int).astype(str) + ' - ' + scoreboard['tie_home'].astype(int).astype(str) + ')'
+    scoreboard['record_away'] = '(' + scoreboard['win_away'].astype(int).astype(str) + ' - ' + scoreboard['loss_away'].astype(int).astype(str) + ' - ' + scoreboard['tie_away'].astype(int).astype(str) + ')'
+    scoreboard['record_h2h'] = '(' + scoreboard['win_home'].astype(int).astype(str) + ' - ' + scoreboard['win_away'].astype(int).astype(str) + ')'
+    scoreboard['record_h2h'] = np.select([scoreboard.SARJA.str.endswith('lohko').values], [['' for i in range(len(scoreboard))]], scoreboard.record_home)
+    scoreboard['record_home'] = np.select([scoreboard.SARJA.str.endswith('lohko')], [scoreboard.record_home], '')
+    scoreboard['record_away'] = np.select([scoreboard.SARJA.str.endswith('lohko')], [scoreboard.record_away], ['' for i in range(len(scoreboard))])
+    
+    scoreboard = scoreboard.merge(teams, left_on='KOTI', right_on='Pelaaja').merge(teams, left_on='VIERAS', right_on='Pelaaja', suffixes=('_KOTI','_VIERAS'))
+    scoreboard['playercard_home'] = scoreboard['KOTI'] + ' (' + scoreboard['Joukkue_KOTI'] + ')'
+    scoreboard['playercard_away'] = scoreboard['VIERAS'] + ' (' + scoreboard['Joukkue_VIERAS'] + ')'
+    return scoreboard
+
 class GameData():
     def __init__(self):
-        sheets.schedule_sheets_update('create')
+        # sheets.schedule_sheets_update('create')
         self.refresh_data()
     
     def refresh_data(self):
@@ -102,8 +120,25 @@ class GameData():
         self.games, self.goals = sheets.read_game_data(self.schedule)
         self.scoreboard = get_scoreboard(self.games, self.goals)
         self.standings = get_standings(self.scoreboard)
-        self.scoreboard = self.scoreboard \
-                .merge(self.standings, left_on=['KOTI', 'series'], right_on=['team','series'])\
-                .merge(self.standings, left_on=['VIERAS', 'series'], right_on=['team','series'], suffixes=('_home','_away'))
+        self.scoreboard = scoreboard_standings(self.scoreboard, self.standings, self.teams)
         self.players = get_players(self.goals, self.teams)
-     
+
+    
+    def render_scoreboard(self, scoreboard):
+        render_cols = ['SARJA','playercard_home','playercard_away',
+                'AREENA', 'score', 'Joukkue_KOTI', 'Joukkue_VIERAS',
+                'record_home','record_away', 'record_h2h', 'game_state']
+        return scoreboard[render_cols].to_dict(orient='records')
+    
+    def get_live(self):
+        scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'KÄYNNISSÄ')]
+        return self.render_scoreboard(scoreboard)
+
+    def get_ended(self):
+        scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'PÄÄTTYNYT')].iloc[:4]
+        return self.render_scoreboard(scoreboard)
+    
+    def get_upcoming(self):
+        scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'TULOSSA')].iloc[:2]
+        return self.render_scoreboard(scoreboard)
+    
