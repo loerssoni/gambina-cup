@@ -1,7 +1,7 @@
 env: standard
 runtime: python312
 
-entrypoint: gunicorn -b 0.0.0.0:8080 layouts:server
+entrypoint: gunicorn -b 0.0.0.0:8080 app:server
 
 automatic_scaling:
   target_cpu_utilization: 0.65
