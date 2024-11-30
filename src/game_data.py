@@ -24,13 +24,18 @@ def read_players():
 def get_scoreboard(games, goals):
     scores = goals.groupby(['scoring_team', 'SARJA', 'KOTI', 'VIERAS', 'name'], as_index=False)['n_goals'].max()
     scores = scores.pivot(columns='scoring_team', index='name', values='n_goals')
-
+    
     if len(goals) > 0:
         scoreboard = games.join(scores, on=['name'], rsuffix='_SCORE')
     else:
         scoreboard = games
+        
+    if 'KOTI_SCORE' not in scoreboard: 
         scoreboard['KOTI_SCORE'] = 0
+    if 'VIERAS_SCORE' not in scoreboard:
         scoreboard['VIERAS_SCORE'] = 0
+
+    
 
     scoreboard[['KOTI_SCORE', 'VIERAS_SCORE']] = scoreboard[['KOTI_SCORE', 'VIERAS_SCORE']].fillna(0)
     scoreboard['game_n'] = ''
@@ -125,14 +130,14 @@ class GameData():
         self.refresh_data()
     
     def refresh_data(self):
-        sheets.schedule_sheets_update('create')
+        # sheets.schedule_sheets_update('create')
         self.teams = read_teams()
         self.schedule = read_schedule()
         self.games, self.goals = sheets.read_game_data(self.schedule)
         self.scoreboard = get_scoreboard(self.games, self.goals)
-        self.standings = get_standings(self.scoreboard)
-        self.scoreboard = scoreboard_standings(self.scoreboard, self.standings, self.teams)
-        self.players = get_players(self.goals, self.teams, self.games)
+        # self.standings = get_standings(self.scoreboard)
+        # self.scoreboard = scoreboard_standings(self.scoreboard, self.standings, self.teams)
+        # self.players = get_players(self.goals, self.teams, self.games)
 
     
     def render_scoreboard(self, scoreboard):
