@@ -1,4 +1,4 @@
-key_path = '../secrets/sheet-reader-key.json'
+key_path = './secrets/sheet-reader-key.json'
 spreadsheet_id = '1VwC-GYUuEjsZr1DqGgeo8Wkv6_Ly6NZjAV07Zeik4ko'
 
 
