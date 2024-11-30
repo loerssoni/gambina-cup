@@ -122,7 +122,7 @@ def scoreboard_standings(scoreboard, standings, teams):
 
 class GameData():
     def __init__(self):
-        # sheets.schedule_sheets_update('create')
+        sheets.schedule_sheets_update('create')
         self.refresh_data()
     
     def refresh_data(self):
