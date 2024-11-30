@@ -130,14 +130,14 @@ class GameData():
         self.refresh_data()
     
     def refresh_data(self):
-        # sheets.schedule_sheets_update('create')
+        sheets.schedule_sheets_update('create')
         self.teams = read_teams()
         self.schedule = read_schedule()
         self.games, self.goals = sheets.read_game_data(self.schedule)
         self.scoreboard = get_scoreboard(self.games, self.goals)
-        # self.standings = get_standings(self.scoreboard)
-        # self.scoreboard = scoreboard_standings(self.scoreboard, self.standings, self.teams)
-        # self.players = get_players(self.goals, self.teams, self.games)
+        self.standings = get_standings(self.scoreboard)
+        self.scoreboard = scoreboard_standings(self.scoreboard, self.standings, self.teams)
+        self.players = get_players(self.goals, self.teams, self.games)
 
     
     def render_scoreboard(self, scoreboard):
