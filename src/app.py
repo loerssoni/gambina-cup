@@ -150,7 +150,7 @@ def update_data(n):
     return games_list, standings_elements, [points_tabs]
 
 # set app server to variable for deployment
-srv = app.server
+server = app.server
 
 # set app callback exceptions to true
 app.config.suppress_callback_exceptions = True
