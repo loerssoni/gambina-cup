@@ -75,9 +75,11 @@ def get_standings(scoreboard):    # Transform to long-form and count victories a
     
     final =  final.fillna(0).sort_values(['series', 'points', 'win','games'], ascending=[True, False, False, True]).reset_index(drop=True)
     final['position'] = final.groupby('series').cumcount()  + 1
+    final = final.set_index(['series', 'team']).astype(int).reset_index().astype(str)
     return final
 
-def get_players(goals, teams):
+def get_players(goals, teams, games):
+
     players = read_players()
     points_data = {}
     points_data['goal_scorers'] = goals.scorer.value_counts()
@@ -91,6 +93,13 @@ def get_players(goals, teams):
     players[points_data.columns] = players[points_data.columns].fillna(0)
     players = players.merge(teams, left_on='Team', right_on='Joukkue', how='inner')
     players['Joukkue'] = players.Player + '\n(' + players.Joukkue + ')'
+    games_played = pd.concat([
+        games[games.game_state == 'PÄÄTTYNYT'].merge(players, right_on='Pelaaja', left_on='KOTI')[['name','Player']],
+        games[games.game_state == 'PÄÄTTYNYT'].merge(players, right_on='Pelaaja', left_on='VIERAS')[['name','Player']]
+    ]).Player.value_counts()
+    games_played.name = 'games_played'
+
+    players = players.join(games_played, on='Player')
 
     return players
 
@@ -123,7 +132,7 @@ class GameData():
         self.scoreboard = get_scoreboard(self.games, self.goals)
         self.standings = get_standings(self.scoreboard)
         self.scoreboard = scoreboard_standings(self.scoreboard, self.standings, self.teams)
-        self.players = get_players(self.goals, self.teams)
+        self.players = get_players(self.goals, self.teams, self.games)
 
     
     def render_scoreboard(self, scoreboard):
@@ -144,8 +153,28 @@ class GameData():
         scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'TULOSSA')].iloc[:2]
         return self.render_scoreboard(scoreboard)
     
-
-    def render_points(self):
-        output = self.players[['Player', 'goal_scorers', 'assists', 'points', 'Joukkue']]
-        output.columns = ['Pelaaja','Maalit','Syötöt','Pisteet', 'Joukkue']
+    def render_points(self, mode='Pisteet'):
+        output = self.players[['Player', 'games_played', 'goal_scorers', 'assists', 'points', 'Pelaaja']].copy()
+        output.columns = ['Pelaaja','Ottelut','Maalit','Syötöt','Pisteet', 'Joukkue']
+        
+        if mode == 'Maalit':
+            output = output.sort_values(['Maalit','Ottelut'], ascending=[False, True])
+        elif mode == 'Syötöt':
+            output = output.sort_values(['Syötöt','Ottelut'], ascending=[False, True])
+        else:
+            output = output.sort_values(['Pisteet','Maalit','Ottelut'], ascending=[False, False, True])  
+        
+        if mode != 'Näytä kaikki':
+            output = output.iloc[:5]
         return output
+        
+
+    def render_standings(self):
+        input_cols = ['team','games', 'win', 'tie', 'loss', 'points']
+
+        group_a = self.standings.loc[self.standings.series == 'A-lohko', input_cols]
+        group_b = self.standings.loc[self.standings.series == 'B-lohko', input_cols]
+        
+        group_a.columns = [' ', 'G', 'W', 'T', 'L', 'P']
+        group_b.columns = [' ', 'G', 'W', 'T', 'L', 'P']
+        return group_a, group_b
