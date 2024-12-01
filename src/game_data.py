@@ -248,8 +248,8 @@ class GameData():
     def render_standings(self):
         input_cols = ['rank', 'team', 'games', 'wins', 'extra_points', 'losses', 'points']
 
-        group_a = self.standings.loc[self.standings.series == 'A-lohko', input_cols]
-        group_b = self.standings.loc[self.standings.series == 'B-lohko', input_cols]
+        group_a = self.standings.loc[self.standings.sarja == 'A-lohko', input_cols]
+        group_b = self.standings.loc[self.standings.sarja == 'B-lohko', input_cols]
         
         group_a.columns = ['  ',' ', 'O', 'V', 'LP', 'T', 'P']
         group_b.columns = ['  ',' ', 'O', 'V', 'LP', 'T', 'P']
