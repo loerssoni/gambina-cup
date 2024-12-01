@@ -168,7 +168,7 @@ def get_scoreboard(games, goals, standings, teams):
     scoreboard = games[['SARJA','name','KOTI', 'VIERAS', 'game_state']].merge(team_goals, how='left', left_on=['SARJA','name', 'KOTI'], 
                                                                     right_on=['sarja','game','team'])\
         .merge(team_goals, how='left', left_on=['SARJA','name', 'VIERAS'], right_on=['sarja','game','team'], suffixes = ('_home','_away'))
-    scoreboard['overtime'] = scoreboard.overtime_home.fillna(scoreboard.overtime_away).fillna(False)
+    scoreboard['overtime'] = scoreboard.overtime_home.fillna(False)
     scoreboard = scoreboard[['SARJA', 'name','game_state', 'team_home','goals_home','overtime', 'team_away', 'goals_away']].copy()
     scoreboard[['goals_home', 'goals_away']] = scoreboard[['goals_home', 'goals_away']].fillna(0)
     scoreboard['series'] = scoreboard['name'].str[:-2]
@@ -179,10 +179,14 @@ def get_scoreboard(games, goals, standings, teams):
         axis=1
     )
     scoreboard = scoreboard \
-            .merge(standings, left_on=['team_home', 'SARJA'], right_on=['team','sarja'])\
-            .merge(standings, left_on=['team_away', 'SARJA'], right_on=['team','sarja'], suffixes=('_home_s','_away_s'))
+            .merge(standings, how='left', left_on=['team_home', 'SARJA'], right_on=['team','sarja'])\
+            .merge(standings, how='left', left_on=['team_away', 'SARJA'], right_on=['team','sarja'], suffixes=('_home_s','_away_s'))
+    stcols = ['wins_home_s','losses_home_s','extra_points_home_s', 'wins_away_s','losses_away_s','extra_points_away_s']
+    scoreboard[stcols] = scoreboard[stcols].fillna(0).astype(int)
 
     scoreboard['score'] = scoreboard['goals_home'].astype(int).astype(str) + ' - ' + scoreboard['goals_away'].astype(int).astype(str)
+    scoreboard.loc[scoreboard.overtime, 'score'] += ' (JA)'
+    
     scoreboard['record_home'] = '(' + scoreboard['wins_home_s'].astype(int).astype(str) + ' - ' \
         + scoreboard['losses_home_s'].astype(int).astype(str) + ' - ' \
         + scoreboard['extra_points_home_s'].astype(int).astype(str) + ')'
@@ -198,6 +202,7 @@ def get_scoreboard(games, goals, standings, teams):
     scoreboard['playercard_home'] = scoreboard['team_home'] + ' (' + scoreboard['Joukkue_KOTI'] + ')'
     scoreboard['playercard_away'] = scoreboard['team_away'] + ' (' + scoreboard['Joukkue_VIERAS'] + ')'
     return scoreboard
+
 class GameData():
     def __init__(self):
         self.refresh_data()
