@@ -111,7 +111,7 @@ def schedule_sheets_update(mode):
     
     
     move_requests = []
-    for sheet_name in ['AIKATAULU','JOUKKUEET','NHL','TEMPLATE']:
+    for sheet_name in ['JOUKKUEET','NHL','TEMPLATE', 'AIKATAULU']:
         move_requests.append({
         "updateSheetProperties": {
             "properties": {
@@ -143,7 +143,7 @@ def read_game_data(schedule):
 
         name = f'{game_id}_{n_games[game_id]}'
         row['name'] = name
-        ranges.append(f'{name}!A5:J30')
+        ranges.append(f'{name}!A6:J39')
         metadata_rows.append(row)
 
     # Request to batch get values from multiple ranges
@@ -155,31 +155,46 @@ def read_game_data(schedule):
 
     goals = []
     for value_range, metadata in zip(response['valueRanges'], metadata_rows):
-        metadata['game_state'] = value_range['values'][23][3]
-        for i, row in enumerate(value_range.get('values', [])[:20]):
-            if len(row) > 0:
+        metadata['game_state'] = value_range['values'][6][3]
+            
+        for i, row in enumerate(value_range.get('values', [])[:34]):
+            if len(row) > 0 and row[0] != '':
+                
                 row_data = {
                     'scoring_team':'KOTI',
                     'scorer':row[0],
                     'ass_1': row[1],
                     'ass_2': row[2],
-                    'n_goals': i + 1
+                    'overtime': i == 33
                 }
 
                 row_data.update(metadata)
                 goals.append(row_data)
-
+                
+            if len(row) > 5 and row[5] != '':
                 row_data = {
                     'scoring_team':'VIERAS',
                     'scorer':row[5],
-                    'ass_1': row[6],
-                    'ass_2': row[7],
-                    'n_goals': i + 1
+                    'overtime': i == 33
                 }
+
+                if len(row) > 6:
+                    row_data['ass_1'] = row[6]
+                if len(row) > 7:
+                    row_data['ass_2'] = row[7]
+
                 row_data.update(metadata)
                 goals.append(row_data)
-    goals = pd.DataFrame(goals)
-    goals = goals[goals.scorer != '']
+                
+    if len(goals) > 0:
+        goals = pd.DataFrame(goals)
+        goals = goals[goals.scorer != '']
+
+    else:
+        goals = pd.DataFrame(columns=['name', 'scoring_team_pos', 'scoring_team','scorer','ass_1','ass_2','overtime', 'KOTI','VIERAS','SARJA'])
+    goals['scoring_team_pos'] = goals.scoring_team.copy()
+    goals['scoring_team'] = goals.apply(lambda x: x[x['scoring_team']], axis=1)
+        
     return pd.DataFrame(metadata_rows), goals
 
 

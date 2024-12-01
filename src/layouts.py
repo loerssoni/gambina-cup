@@ -14,9 +14,9 @@ def get_games_elements(games):
 
         by_series[game['SARJA']] = by_series.get(game['SARJA'], []) + [dbc.Row(
             children=[
-                dbc.Col(html.Strong(game['KOTI']), width=4, style=team_style),
+                dbc.Col(html.Strong(game['team_home']), width=4, style=team_style),
                 dbc.Col(html.Strong(game['score']), width=4, style=score_style),
-                dbc.Col(html.Strong(game['VIERAS']), width=4, style=team_style),
+                dbc.Col(html.Strong(game['team_away']), width=4, style=team_style),
             ],
             style={'marginBottom': '1px', 'alignItems':'center'}
         ),]
