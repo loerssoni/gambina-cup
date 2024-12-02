@@ -84,11 +84,6 @@ def get_playoff_bracket(playoff_games):
                     html.Div(className="match", children=bracket_inputs['Valdemar'][0]),
                 ]
             ),
-            html.Div(
-                children=[
-                    html.Div(className="match", children=bracket_inputs['Valdemar'][0]),
-                ]
-            ),
             
         ]
         )
