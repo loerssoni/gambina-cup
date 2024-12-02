@@ -53,25 +53,110 @@ def get_games_elements(games):
             )
         games_elements.append(game_element)
 
-    return html.Div(
-        children=games_elements,
-        style={"margin": "2px"}
+    return games_elements
+
+el_ongoing = dbc.Accordion(
+    [   dbc.AccordionItem(
+            id = 'games-ongoing',
+            title=html.Strong("KÄYNNISSÄ", style={'display':'flex','justifyContent':'center',
+                'margin':'2px'}),
+        )
+    ],
+    always_open=True
+)
+
+el_upcoming = dbc.Accordion(
+    [   
+        dbc.AccordionItem(
+            id = 'games-upcoming',
+            title=html.Strong("TULOSSA", style={'display':'flex','justifyContent':'center',
+                'margin':'2px'})
+        ),
+        dbc.AccordionItem(
+            id='games-ended',
+            title=html.Strong("PÄÄTTYNYT", style={'display':'flex','justifyContent':'center',
+                'margin':'2px'})
+        )
+    ],
+    start_collapsed=True
+)
+
+games_list = [
+    el_ongoing,
+    el_upcoming
+]
+
+
+standings_elements = [
+    html.Strong("A-lohko", style={'display':'flex','justifyContent':'center',
+                'margin':'5px', 'fontSize':'18'}),
+    html.Div(id='a-table'),
+    html.Strong("B-lohko", style={'display':'flex','justifyContent':'center',
+                'margin':'5px', 'fontSize':'18'}),
+    html.Div(id='b-table')
+]
+
+playoff_elements = [
+    html.Div(id='poff-bracket-container')
+]
+
+standings_tabs = dbc.Tabs(
+        [
+            dbc.Tab(
+                label="Sarjataulukko",
+                tab_id="tab-sarjataulukko",
+                children=standings_elements,
+                label_style = {"margin": "3px", "padding":"3px 10px 3px 10px"}
+            ),
+            dbc.Tab(
+                label="Pudotuspelit",
+                tab_id="tab-playoffs",
+                children=playoff_elements,
+                label_style = {"margin": "3px", "padding":"3px 10px 3px 10px"}
+            )
+        ],
+        id="standings-tabs",  # Optional: to handle tab switching callbacks
+        active_tab="tab-sarjataulukko",
     )
 
-# Define the table component
-def get_points_table(data, rows_to_show=3):
-    # Slice data to show a limited number of rows by default
-    limited_data = data.head(rows_to_show)
+points_tables = {
+    'Pisteet':'points',
+    'Maalit':'goals',
+    'Syötöt':'assists',
+    'Näytä kaikki':'show-all'
+}
 
-    return dash_table.DataTable(
-        id="points-table",
-        columns=[{"name": col, "id": col} for col in data.columns],
-        data=limited_data.to_dict("records"),  # Limited data
-        style_table={"overflowX": "auto", "margin":"2px"},
-        style_as_list_view=True,
-        style_cell={"padding": "5px", "textAlign": "left"},
-        style_header={"fontWeight": "bold"},
-        sort_action="native",  # Enables column sorting
-        page_action="none",  # Show all rows at once (no pagination)
-        row_selectable="multi",  # Optional: allow row selection
-    )
+points_tabs = {}
+for season_type in ['regular', 'post']: 
+    points_tabs[season_type] = [
+        dbc.Tab(
+            label=label,
+            id=f"tab-{id}-{season_type}",
+            label_style = {"margin": "3px", "padding":"3px 10px 3px 10px"}
+        ) for label, id in points_tables.items()
+    ]
+
+tabs_of_tabs = [
+    dbc.Tab(dbc.Tabs(
+            points_tabs['regular'],
+            id="points-tabs-regular",  # Optional: to handle tab switching callbacks
+            active_tab="tab-points-regular",
+            style={"border-radius":"6px", "background-color":"white"}
+    ),
+    label="Runkosarja", 
+    id = "regular-season-tab"),
+    dbc.Tab(dbc.Tabs(
+            points_tabs['post'],
+            id="points-tabs-post",  # Optional: to handle tab switching callbacks
+            active_tab="tab-points-post",
+            style={"border-radius":"6px", "background-color":"white"}
+    ),
+    label="Playoffs", 
+    id = "post-season-tab")   
+]
+
+points_tabs_total = dbc.Tabs(
+    tabs_of_tabs,
+    active_tab="regular-season-tab",
+    style={"border-radius":"6px", "background-color":"white"}
+)

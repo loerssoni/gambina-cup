@@ -3,6 +3,7 @@ from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
 from game_data import GameData
+import playoff_bracket
 import layouts
 
 data = GameData()
@@ -17,7 +18,8 @@ app.title = "Gambina Cup scoreboard"
 
 
 # Layout
-app.layout = dbc.Container(
+app.layout = html.Div([
+    dbc.Container(
         children=[
             dcc.Interval(id='update-interval', interval=30000, n_intervals=0),
             # Games and Standings side by side
@@ -26,128 +28,83 @@ app.layout = dbc.Container(
                     
                     dbc.Col([
                             html.H4("Ottelut", style={"text-align": "center", "font-size":"24px", "margin":"0px"}),
-                            html.Div(id="games-list", style={"margin": "5px"}),
+                            html.Div(children=layouts.games_list, style={"margin": "5px"}),
                             html.H4("Pistepörssi", style={"text-align": "center", "font-size":"24px", "margin":"0px"}),
-                            html.Div(id="points-leaders-table", style={"text-align": "center", "margin": "5px"}),
+                            dbc.Card(layouts.points_tabs_total, style={"text-align": "center", "margin": "5px",
+                                "background-color":"white", "border-radius":"6px"}),
+                           
                         ],  
                         xs=12, md=7  # Full width on mobile, half width on medium+
                     ),
                     dbc.Col(
                         html.Div(
                             [
-                                html.H4("Sarjataulukko", style={"text-align": "center", "fontSize":"24px"}),
-                                html.Div(id="standings-table", style={"text-align": "center", "margin": "5px"}),
+                                html.Div([layouts.standings_tabs], style={"text-align": "center", "margin": "5px"}),
                             ]
                         ),
                         xs=12, md=5  # Full width on mobile, half width on medium+
                     ),
                 ],
                 style={"marginBottom": "0px"}
-            ),
-            # Pistepörssi Section
-            dbc.Row(
-                children=[
-                    dbc.Col(
-                        html.Div(
-                            [
-                               
-                            ]
-                        ),
-                        xs=12, md=8  # Full width on mobile, half width on medium+
-                    )
-                ],
-                style={"marginBottom": "2px"}
-            ),
+            )
         ],
-        fluid=True  # Ensures the layout stretches to screen width
-    )
+        fluid=True
+    )],
+)
 
 # Callback to update all data
 @app.callback(
-    [Output("games-list", "children"),
-     Output("standings-table", "children"),
-     Output("points-leaders-table", "children")],
+    [Output("games-ongoing", "children"),
+     Output("games-upcoming", "children"),
+     Output("games-ended", "children"),
+     Output("a-table", "children"),
+     Output("b-table", "children"),
+     Output("poff-bracket-container", "children"),
+     Output("tab-points-regular", "children"),
+     Output("tab-goals-regular", "children"),
+     Output("tab-assists-regular", "children"),
+     Output("tab-show-all-regular", "children"),
+     Output("tab-points-post", "children"),
+     Output("tab-goals-post", "children"),
+     Output("tab-assists-post", "children"),
+     Output("tab-show-all-post", "children")],
     [Input("update-interval", "n_intervals")]
 )
 def update_data(n):
     # Generate games list
     data.refresh_data()
-
-    games_list = [
-        dbc.Row(
-            children=[
-                dbc.Col(html.Strong("KÄYNNISSÄ", style={'display':'flex','justifyContent':'left',
-                 'marginLeft':'28px', 'fontSize':'18'}), width=12),
-            ],
-            style={'marginBottom': '5px'}
-    )]
-    live = data.get_live()
-    games_list.append(layouts.get_games_elements(live))
-
+    live = layouts.get_games_elements(data.get_live())
+    upcoming = layouts.get_games_elements(data.get_upcoming())
+    ended = layouts.get_games_elements(data.get_ended())
     
-    upcoming = data.get_upcoming()
-    ended = data.get_ended()
 
-    el_upcoming = dbc.Accordion(
-        [
-            dbc.AccordionItem(
-                layouts.get_games_elements(upcoming),
-                title=html.Strong("TULOSSA", style={'display':'flex','justifyContent':'center',
-                 'margin':'2px'})
-            ),
-            dbc.AccordionItem(
-                layouts.get_games_elements(ended),
-                title=html.Strong("PÄÄTTYNYT", style={'display':'flex','justifyContent':'center',
-                 'margin':'2px'}),
-            ),
-        ],
-        start_collapsed=True
-    )
-    games_list.append(el_upcoming)
-
-
-    # # Generate standings table
+    # Generate standings table
     group_a, group_b = data.render_standings()
+    
+    group_a_table = dbc.Table.from_dataframe(
+        group_a, striped=False, 
+        bordered=False, hover=True, style={"margin": "10px"}
+    )
 
-    standings_elements = [
-        html.Strong("A-lohko", style={'display':'flex','justifyContent':'center',
-                 'margin':'5px', 'fontSize':'18'}),
+    group_b_table = dbc.Table.from_dataframe(
+        group_b, striped=False, 
+        bordered=False, hover=True, style={"margin": "10px"}
+    )
 
-        dbc.Table.from_dataframe(
-            group_a, striped=False, bordered=False, hover=True, style={"margin": "10px"}
-        ),
 
-        html.Strong("B-lohko", style={'display':'flex','justifyContent':'center',
-                 'margin':'5px', 'fontSize':'18'}),
+    poff_bracket = playoff_bracket.get_playoff_bracket(data.render_playoff_games())
 
-        dbc.Table.from_dataframe(
-            group_b, striped=False, bordered=False, hover=True, style={"margin": "10px"}
-        )
-    ]
+    points_tables = []
+    for season_type in ['regular', 'post']:
+        for k in ['points','goals','assists','show-all']:
+            points_df = data.render_points(k, season_type)
+            points_tables.append(dbc.Table.from_dataframe(
+                points_df, striped=False, bordered=False, hover=True, style={"margin": "0px"}
+            ))
 
-    points_tables = {}
-    for k in ['Pisteet','Maalit','Syötöt','Näytä kaikki']:
-        points_df = data.render_points(k)
-        points_tables[k] = dbc.Table.from_dataframe(
-            points_df, striped=False, bordered=False, hover=True, style={"margin": "10px"}
-        )
-
-    points_tabs = dbc.Tabs(
-            [
-                dbc.Tab(
-                    label=k,
-                    tab_id=f"tab-{k}",
-                    children=[
-                        points_tables[k]
-                    ],
-                    label_style = {"margin": "3px", "padding":"3px 10px 3px 10px"}
-                ) for k in points_tables
-            ],
-            id="tabs",  # Optional: to handle tab switching callbacks
-            active_tab="tab-Pisteet",
-        )
-
-    return games_list, standings_elements, [points_tabs]
+    outputs = [live, upcoming, ended, group_a_table, group_b_table, poff_bracket]
+    outputs = outputs + points_tables
+    return outputs
 
 # set app server to variable for deployment
 server = app.server

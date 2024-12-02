@@ -1,0 +1,53 @@
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 150px);
+    align-items: center;
+  }
+  
+  .justify-space-around {
+    display: grid;
+    align-content: space-around;
+    min-height: 100%;
+  }
+  
+  .round {
+    position: relative;
+    max-width: 85px;
+  }
+  
+  .final-round {
+    position: relative;
+    max-width: 85px;
+    top: 40px;
+  }
+  
+  .match {
+    display: grid;
+    justify-content: center;
+    align-content: center;
+    height: 85px;
+    width: 40px;
+    margin: 0px auto;
+    background-color: white;
+  }
+  
+  .link {
+    position: absolute;
+    top: 25%;
+    bottom: 25%;
+    left: 100%;
+    right: -10px;
+    border-top: 1px solid ;
+    border-bottom: 1px solid;
+    border-right: 1px solid;
+  }
+  
+  .link:after {
+    content: "";
+    position: absolute;
+    top: calc(50% - 5px);
+    left: 10px;
+    width: 0;
+    height: 0;
+    border-top: 1px solid;
+    border-right: 10px solid;}
