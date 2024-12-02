@@ -51,6 +51,12 @@ def break_ties(shared_games, original_standings):
     if tiebreak.nunique() != 1:
         return tiebreak
 
+    print('Goals')
+    # if still all ties, check goals scoted between tied teams
+    tiebreak = tiebreak_standings['goals'].rank(method='min', ascending=False)
+    if tiebreak.nunique() != 1:
+        return tiebreak
+
     print('Regulation wins')
     # if still all ties, check regulation wins for entire group
     tiebreak = rank_sarjateams['regulation_wins'].rank(method='min', ascending=False)
