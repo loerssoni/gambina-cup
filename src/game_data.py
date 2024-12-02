@@ -101,8 +101,9 @@ def run_tiebreak(standings, team_goals):
     return standings
 
 def get_standings(games, goals):
-    games = games.loc[games.game_state == 'PÄÄTTYNYT'].copy()
-    games_long = pd.melt(games, ['SARJA', 'name'],['KOTI','VIERAS'], value_name='scoring_team')
+
+    games_ended = games.loc[games.game_state == 'PÄÄTTYNYT'].copy()
+    games_long = pd.melt(games_ended, ['SARJA', 'name'],['KOTI','VIERAS'], value_name='scoring_team')
     team_goals = goals.groupby(['SARJA', 'name','scoring_team'], as_index=False).agg({'scorer':'count','overtime':'max'})
     team_goals = games_long.merge(team_goals, how='left', on=['SARJA', 'name', 'scoring_team']).drop('variable', axis=1)
     team_goals.columns = ['sarja','game','team','goals','overtime']
@@ -125,10 +126,18 @@ def get_standings(games, goals):
 
     # Add rank back to the original DataFrame
     team_goals = team_goals.merge(standings[['sarja', 'team', 'rank']], on=['sarja', 'team'], how='left')
+    team_goals['opponent_team'] = team_goals['opponent_team'].astype(str)
     team_goals = team_goals.merge(standings[['sarja', 'team', 'rank']], 
                                   left_on=['sarja', 'opponent_team'], 
                                   right_on=['sarja', 'team'], how='left', suffixes=('', '_opp'))
     standings = run_tiebreak(standings, team_goals)
+    
+    # finally ensure that all teams are present
+    all_teams = pd.melt(games, id_vars='SARJA', value_vars=['KOTI','VIERAS'])[['SARJA','value']].drop_duplicates()
+    all_teams.columns = ['sarja','team']
+    standings = all_teams.merge(standings, how='left')
+    standings[standings.columns[2:]] = standings[standings.columns[2:]].fillna(0).astype(int)
+    
     return standings
 
 
@@ -208,7 +217,6 @@ class GameData():
         self.refresh_data()
     
     def refresh_data(self):
-        sheets.schedule_sheets_update('create')
         self.teams = read_teams()
         self.schedule = read_schedule()
         self.games, self.goals = sheets.read_game_data(self.schedule)
@@ -259,3 +267,4 @@ class GameData():
         group_a.columns = ['  ',' ', 'O', 'V', 'LP', 'T', 'P']
         group_b.columns = ['  ',' ', 'O', 'V', 'LP', 'T', 'P']
         return group_a, group_b
+

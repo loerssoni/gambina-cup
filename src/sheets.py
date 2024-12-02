@@ -189,11 +189,11 @@ def read_game_data(schedule):
     if len(goals) > 0:
         goals = pd.DataFrame(goals)
         goals = goals[goals.scorer != '']
+        goals['scoring_team_pos'] = goals.scoring_team.copy()
+        goals['scoring_team'] = goals.apply(lambda x: x[x['scoring_team']], axis=1)
 
     else:
-        goals = pd.DataFrame(columns=['name', 'scoring_team_pos', 'scoring_team','scorer','ass_1','ass_2','overtime', 'KOTI','VIERAS','SARJA'])
-    goals['scoring_team_pos'] = goals.scoring_team.copy()
-    goals['scoring_team'] = goals.apply(lambda x: x[x['scoring_team']], axis=1)
+        goals = pd.DataFrame(columns=['name', 'scoring_team_pos', 'scoring_team','scorer','ass_1','ass_2','overtime', 'KOTI','VIERAS','SARJA'])        
         
     return pd.DataFrame(metadata_rows), goals
 
