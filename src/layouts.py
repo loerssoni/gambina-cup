@@ -12,13 +12,14 @@ def get_games_elements(games):
         team_style = {'display': 'flex', 'justifyContent': 'center', 'fontSize':'16px', 'alignItems':'stretch'}
         score_style = {'display': 'flex', 'justifyContent': 'center', 'alignItems':'end', 'fontSize':'20px'}
 
-        by_series[game['SARJA']] = by_series.get(game['SARJA'], []) + [dbc.Row(
-            children=[
-                dbc.Col(html.Strong(game['team_home']), width=4, style=team_style),
-                dbc.Col(html.Strong(game['score']), width=4, style=score_style),
-                dbc.Col(html.Strong(game['team_away']), width=4, style=team_style),
-            ],
-            style={'marginBottom': '1px', 'alignItems':'center'}
+        by_series[game['SARJA']] = by_series.get(game['SARJA'], []) + [
+            dbc.Row(
+                children=[
+                    dbc.Col(html.Strong(game['team_home']), width=4, style=team_style),
+                    dbc.Col(html.Strong(game['score']), width=4, style=score_style),
+                    dbc.Col(html.Strong(game['team_away']), width=4, style=team_style),
+                ],
+                style={'marginBottom': '1px', 'alignItems':'center'}
         ),]
         if game['record_h2h'] == '':
             score_subitem = game['SARJA']
@@ -40,6 +41,9 @@ def get_games_elements(games):
 
         game_element = dbc.Card(
             children=[
+                dbc.Row(
+                    dbc.Col(series_type, width=12, style={'fontSize':'14px','textAlign':'center'})
+                ),
                 dbc.CardBody(
                     children=card_contents, style={'padding':'0px'}
                 ),
@@ -97,7 +101,11 @@ standings_elements = [
 ]
 
 playoff_elements = [
-    html.Div(id='poff-bracket-container')
+    html.Div(id='poff-bracket-container'),
+]
+
+final_standings_elements = [
+    html.Div(id='final-standings-container')
 ]
 
 standings_tabs = dbc.Tabs(
@@ -112,6 +120,12 @@ standings_tabs = dbc.Tabs(
                 label="Pudotuspelit",
                 tab_id="tab-playoffs",
                 children=playoff_elements,
+                label_style = {"margin": "3px", "padding":"3px 10px 3px 10px"}
+            ),
+            dbc.Tab(
+                label="Lopputulokset",
+                tab_id="tab-final-standings",
+                children=final_standings_elements,
                 label_style = {"margin": "3px", "padding":"3px 10px 3px 10px"}
             )
         ],

@@ -60,6 +60,7 @@ app.layout = html.Div([
      Output("a-table", "children"),
      Output("b-table", "children"),
      Output("poff-bracket-container", "children"),
+     Output("final-standings-container", "children"),
      Output("tab-points-regular", "children"),
      Output("tab-goals-regular", "children"),
      Output("tab-assists-regular", "children"),
@@ -102,7 +103,12 @@ def update_data(n):
                 points_df, striped=False, bordered=False, hover=True, style={"margin": "0px"}
             ))
 
-    outputs = [live, upcoming, ended, group_a_table, group_b_table, poff_bracket]
+    final_standings_table = dbc.Table.from_dataframe(
+        data.render_final_standings(), striped=False, 
+        bordered=False, hover=True, style={"margin": "10px"}
+    )
+
+    outputs = [live, upcoming, ended, group_a_table, group_b_table, poff_bracket, final_standings_table]
     outputs = outputs + points_tables
     return outputs
 

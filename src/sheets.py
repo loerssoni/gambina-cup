@@ -198,6 +198,57 @@ def read_game_data(schedule):
     return pd.DataFrame(metadata_rows), goals
 
 
+def get_new_schedule_rows(data):
+    new_rows = []
+    for sarja, seeds in data.get_seedings().items():
+        for i in range(len(seeds)):
+            if sarja not in ['Puolivälierät', 'Välierät', 'Finaali'] and i > 0:
+                pass
+            else:
+                new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
+
+        if sarja in ['Puolivälierät', 'Välierät', 'Finaali']:
+            for i in range(len(seeds)):
+                new_rows.append([sarja, seeds[len(seeds)-i], seeds[i+1], 'Ei valittu'])
+            for i in range(len(seeds)):
+                new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
+    return new_rows
+
+def update_schedule():
+    from game_data import GameData
+    data = GameData()
+    new_rows = get_new_schedule_rows(data)
+
+    sheet_name = "AIKATAULU"
+
+    # Read the data from column A to find the first empty row
+    response = service.spreadsheets().values().get(
+        spreadsheetId=spreadsheet_id,
+        range=f"{sheet_name}!A:A"
+    ).execute()
+
+    values = response.get('values', [])
+    first_empty_row = len(values) + 1 if values else 1
+
+    # Define the range starting from the first empty row
+    update_range = f"{sheet_name}!A{first_empty_row}:D"
+
+    # Define the data to write
+    body = {
+        "values": new_rows
+    }
+
+    # # Perform the update
+    response = service.spreadsheets().values().update(
+        spreadsheetId=spreadsheet_id,
+        range=update_range,
+        valueInputOption="USER_ENTERED",
+        body=body
+    ).execute()
+
+    print("Update response:", response)
+
+
 def read_data(range_name):
     data = service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name, valueRenderOption='UNFORMATTED_VALUE').execute()
     return pd.DataFrame(data['values'][1:], columns=data['values'][0])

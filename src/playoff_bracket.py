@@ -9,7 +9,7 @@ def get_playoff_bracket(playoff_games):
         step_games = playoff_games.loc[step]
         for i, name in enumerate(step_games.index.get_level_values('name')):
             name_step_games = step_games.loc[name]
-            if len(name_step_games.shape) != 1:
+            if len(name_step_games.shape) != 1 or len(name_step_games) == 0:
                 bracket_inputs[step][i] = []
             else:
                 home_team = name_step_games['team_home']
@@ -17,10 +17,11 @@ def get_playoff_bracket(playoff_games):
                 away_team = name_step_games['team_away']
                 away_wins = name_step_games['wins_away']
 
-                if (home_wins == '3') or (home_wins == '1' and 'Pronssiottelu' in name):
+                single_game_series = ['Pronssiottelu', 'Valdemar', 'Sijoitusotteluvälierät', 'Sijoitusottelut']
+                if (home_wins == '3') or (home_wins == '1' and any([s in name for s in single_game_series])):
                     home_team = html.Strong(home_team)
                     home_wins = html.Strong(home_wins)
-                elif (away_wins == '3') or (away_wins == '1' and 'Pronssiottelu' in name):
+                elif (away_wins == '3') or (away_wins == '1' and any([s in name for s in single_game_series])):
                     away_team = html.Strong(away_team)
                     away_wins = html.Strong(away_wins)
 
@@ -34,8 +35,6 @@ def get_playoff_bracket(playoff_games):
                             html.Span(away_wins, style={"font-size": "14px"})
                         ], style={"display": "block", "text-align": "right"}),
                 ]
-
-    
     
     bracket = html.Div(
         className="container grid",
@@ -81,7 +80,25 @@ def get_playoff_bracket(playoff_games):
             html.Div(
                 className="round",
                 children=[
+                    html.Strong("9. Sija"),
                     html.Div(className="match", children=bracket_inputs['Valdemar'][0]),
+                ]
+            ),
+            html.Div(
+                className="round justify-space-around",
+                children=[
+                    html.Div(className="match", children=bracket_inputs['Sijoitusotteluvälierät'][0]),
+                    html.Div(className="link"),
+                    html.Div(className="match", children=bracket_inputs['Sijoitusotteluvälierät'][1]),
+                ]
+            ),
+            html.Div(
+                className="final-round",
+                children=[
+                    html.Strong("5. Sija"),
+                    html.Div(className="match", children=bracket_inputs['Sijoitusottelut'][0]),
+                    html.Strong("7. Sija"),
+                    html.Div(className="match", children=bracket_inputs['Sijoitusottelut'][1]),
                 ]
             ),
             
