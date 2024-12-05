@@ -58,8 +58,7 @@ app.layout = html.Div([
     [Output("games-ongoing", "children"),
      Output("games-upcoming", "children"),
      Output("games-ended", "children"),
-     Output("a-table", "children"),
-     Output("b-table", "children"),
+     Output("standings-tables", "children"),
      Output("poff-bracket-container", "children"),
      Output("final-standings-container", "children"),
      Output("tab-points-regular", "children"),
@@ -79,20 +78,18 @@ def update_data(n):
     upcoming = layouts.get_games_elements(data.get_upcoming())
     ended = layouts.get_games_elements(data.get_ended())
     
-
+    standings_tables = []
     # Generate standings table
-    group_a, group_b = data.render_standings()
-    
-    group_a_table = dbc.Table.from_dataframe(
-        group_a, striped=False, 
-        bordered=False, hover=True, style={"margin": "10px"}
-    )
-
-    group_b_table = dbc.Table.from_dataframe(
-        group_b, striped=False, 
-        bordered=False, hover=True, style={"margin": "10px"}
-    )
-
+    for group, g_standings in data.render_standings().items():
+        group_table = dbc.Table.from_dataframe(
+            g_standings, striped=False, 
+            bordered=False, hover=True, style={"margin": "10px"}
+        )
+        standings_tables += [
+            html.Strong(group, style={'display':'flex','justifyContent':'center',
+                        'margin':'5px', 'fontSize':'18'}),
+            html.Div([group_table]),
+        ]
 
     poff_bracket = playoff_bracket.get_playoff_bracket(data.render_playoff_games())
 
@@ -109,7 +106,7 @@ def update_data(n):
         bordered=False, hover=True, style={"margin": "10px"}
     )
 
-    outputs = [live, upcoming, ended, group_a_table, group_b_table, poff_bracket, final_standings_table]
+    outputs = [live, upcoming, ended, standings_tables, poff_bracket, final_standings_table]
     outputs = outputs + points_tables
     return outputs
 

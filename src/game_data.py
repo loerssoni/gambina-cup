@@ -39,7 +39,7 @@ def break_ties(shared_games, original_standings):
         # Break ties by points between tied teams
         tiebreak = tiebreak_standings['rank'].astype(int)
         if tiebreak.nunique() != 1:
-            return tiebreak
+            return tiebreak            
 
         # if still all ties, check goal diff between tied teams
         tiebreak = tiebreak_standings['goal_diff'].rank(method='min', ascending=False)
@@ -274,7 +274,7 @@ class GameData():
         return self.render_scoreboard(scoreboard)
 
     def get_ended(self):
-        scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'PÄÄTTYNYT')]
+        scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'PÄÄTTYNYT')].iloc[::-1]
         return self.render_scoreboard(scoreboard)
     
     def get_upcoming(self):
@@ -300,12 +300,12 @@ class GameData():
     def render_standings(self):
         input_cols = ['rank', 'team', 'games', 'wins', 'extra_points', 'losses', 'points', 'goals', 'opponent_goals']
 
-        group_a = self.standings.loc[self.standings.sarja == 'A-lohko', input_cols]
-        group_b = self.standings.loc[self.standings.sarja == 'B-lohko', input_cols]
-        
-        group_a.columns = ['Sija','Joukkue', 'O', 'V', 'LP', 'T', 'P', 'TM','PM']
-        group_b.columns = ['Sija','Joukkue', 'O', 'V', 'LP', 'T', 'P', 'TM','PM']
-        return group_a, group_b
+        groups = sorted([g for g in self.standings.sarja.unique() if '-lohko' in g])
+        output = {}
+        for group in groups:
+            output[group] = self.standings.loc[self.standings.sarja == group, input_cols]
+            output[group].columns = ['Sija','Joukkue', 'O', 'V', 'LP', 'T', 'P', 'TM','PM']
+        return output
 
     def render_playoff_games(self):
         seedings = self.get_seedings()
@@ -398,8 +398,8 @@ class GameData():
         if len(sijoitussemit) == 4:
             full_seedings['Sijoitusotteluvälierät'] = self.get_seeding(sijoitussemit, regular_standings)
         
-
-        if (regular_standings.games == 4).all():
+        n_teams = len(data.games.home.unique())
+        if (n_teams in [8, 10]) and (regular_standings.games == 4).all():
             a = regular_standings[regular_standings.sarja == 'A-lohko'].sort_values('rank').reset_index(drop=True)
             a.index += 1
             a = a['team'].to_dict()
@@ -413,11 +413,14 @@ class GameData():
                 q_seedings[i*2-1] = a[i]
                 q_seedings[i*2] = b[i]
             full_seedings['Puolivälierät'] = q_seedings
-            valdemar = regular_standings.loc[regular_standings.team.isin([a[5], b[5]])].copy()
-            valdemar['sarja'] = '-'
-            valdemar['rank'] = valdemar['points'].transform('rank', method='min').astype(int)
-            valdemar = run_tiebreak(valdemar, None, no_shared=True)
-            full_seedings['Valdemar'] = valdemar.set_index('rank')['team'].to_dict()
+            if n_teams == 10:
+                valdemar = regular_standings.loc[regular_standings.team.isin([a[5], b[5]])].copy()
+                valdemar['sarja'] = '-'
+                valdemar['rank'] = valdemar['points'].transform('rank', method='min').astype(int)
+                valdemar = run_tiebreak(valdemar, None, no_shared=True)
+                full_seedings['Valdemar'] = valdemar.set_index('rank')['team'].to_dict()
+        if (n_teams ==9) and (regular_standings.games == 4).all():
+            pass
         return full_seedings
 
     def render_final_standings(self):
@@ -443,9 +446,9 @@ class GameData():
             pronssi['rank'] += 2
             final_standings.append(pronssi)
 
-        final = self.standings.loc[self.standings.sarja == 'Finaali', ['team','rank']]
+        final = self.standings.loc[self.standings.sarja == 'Finaali', ['team','rank', 'wins']]
         if (len(final) > 0) and (final['wins'].max() == 3):
-            final_standings.append(final)
+            final_standings.append(final[['team','rank']])
 
         base_standings = pd.DataFrame(range(1,11), columns=['rank'])
         if len(final_standings) == 0:

@@ -90,16 +90,6 @@ games_list = [
     el_upcoming
 ]
 
-
-standings_elements = [
-    html.Strong("A-lohko", style={'display':'flex','justifyContent':'center',
-                'margin':'5px', 'fontSize':'18'}),
-    html.Div(id='a-table'),
-    html.Strong("B-lohko", style={'display':'flex','justifyContent':'center',
-                'margin':'5px', 'fontSize':'18'}),
-    html.Div(id='b-table')
-]
-
 playoff_elements = [
     html.Div(id='poff-bracket-container'),
 ]
@@ -113,7 +103,7 @@ standings_tabs = dbc.Tabs(
             dbc.Tab(
                 label="Sarjataulukko",
                 tab_id="tab-sarjataulukko",
-                children=standings_elements,
+                children=[html.Div(id='standings-tables')],
                 label_style = {"margin": "3px", "padding":"3px 10px 3px 10px"}
             ),
             dbc.Tab(
