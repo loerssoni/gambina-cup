@@ -22,7 +22,7 @@ app.title = "Gambina Cup scoreboard"
 app.layout = html.Div([
     dbc.Container(
         children=[
-            dcc.Interval(id='update-interval', interval=30000, n_intervals=0),
+            dcc.Interval(id='update-interval', interval=10000, n_intervals=0),
             # Games and Standings side by side
             dbc.Row(
                 children=[
