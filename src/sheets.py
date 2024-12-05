@@ -198,7 +198,7 @@ def read_game_data(schedule):
     return pd.DataFrame(metadata_rows), goals
 
 def get_new_schedule_rows(data):
-    n_teams = len(data.games.home.unique())
+    n_teams = len(data.games.KOTI.unique())
     series_wins = {
                 'Puolivälierät': 3,
                 'Valdemar': 1,
@@ -233,7 +233,7 @@ def get_new_schedule_rows(data):
             new_rows.append([sarja, bot, top, 'Ei valittu'])
             new_rows.append([sarja, mid, bot, 'Ei valittu'])
             new_rows.append([sarja, top, mid, 'Ei valittu'])
-            
+
         else:
             for i in range(6):
                 for seed in range(1, len(sarja_seeds)//2 + 1):

@@ -398,7 +398,7 @@ class GameData():
         if len(sijoitussemit) == 4:
             full_seedings['Sijoitusotteluvälierät'] = self.get_seeding(sijoitussemit, regular_standings)
         
-        n_teams = len(data.games.home.unique())
+        n_teams = len(self.games.KOTI.unique())
         if (n_teams in [8, 10]) and (regular_standings.games == 4).all():
             a = regular_standings[regular_standings.sarja == 'A-lohko'].sort_values('rank').reset_index(drop=True)
             a.index += 1
@@ -419,8 +419,19 @@ class GameData():
                 valdemar['rank'] = valdemar['points'].transform('rank', method='min').astype(int)
                 valdemar = run_tiebreak(valdemar, None, no_shared=True)
                 full_seedings['Valdemar'] = valdemar.set_index('rank')['team'].to_dict()
-        if (n_teams ==9) and (regular_standings.games == 4).all():
-            pass
+
+        if (n_teams == 9) and (regular_standings.games == 4).all():
+            full_seedings['Valdemar'] = self.get_seeding(regular_standings.loc[regular_standings['rank'] == 3], regular_standings)
+
+        valdemar = self.standings.loc[(self.standings.sarja == 'Valdemar')] 
+        if (n_teams == 9) and (valdemar.games == 3).all() and len(valdemar) > 0:
+            q_seeds = {}
+            for rank in range(1,3):
+                rank_seeds = self.get_seeding(regular_standings.loc[regular_standings['rank'] == rank], regular_standings)
+                q_seeds.update({r + (rank - 1) * 3: team for r, team in rank_seeds.items()})
+            valdemar_seeding = self.get_seeding(valdemar, regular_standings)
+            q_seeds.update({k+6:v for k, v in valdemar_seeding.items()})
+            full_seedings['Puolivälierät'] = q_seeds
         return full_seedings
 
     def render_final_standings(self):
