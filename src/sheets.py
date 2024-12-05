@@ -227,12 +227,13 @@ def get_new_schedule_rows(data):
         if sarja == 'Valdemar' and n_teams == 8:
             pass
         if sarja == 'Valdemar' and n_teams == 9:
-            top = sarja_seeds.loc[1, 'team']
-            mid = sarja_seeds.loc[2, 'team']
-            bot = sarja_seeds.loc[3, 'team']
-            new_rows.append([sarja, bot, top, 'Ei valittu'])
-            new_rows.append([sarja, mid, bot, 'Ei valittu'])
-            new_rows.append([sarja, top, mid, 'Ei valittu'])
+            if 'Valdemar' not in games_scheduled.sarja.unique():
+                top = sarja_seeds.loc[1, 'team']
+                mid = sarja_seeds.loc[2, 'team']
+                bot = sarja_seeds.loc[3, 'team']
+                new_rows.append([sarja, bot, top, 'Ei valittu'])
+                new_rows.append([sarja, mid, bot, 'Ei valittu'])
+                new_rows.append([sarja, top, mid, 'Ei valittu'])
 
         else:
             for i in range(6):

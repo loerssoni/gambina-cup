@@ -424,7 +424,7 @@ class GameData():
             full_seedings['Valdemar'] = self.get_seeding(regular_standings.loc[regular_standings['rank'] == 3], regular_standings)
 
         valdemar = self.standings.loc[(self.standings.sarja == 'Valdemar')] 
-        if (n_teams == 9) and (valdemar.games == 3).all() and len(valdemar) > 0:
+        if (n_teams == 9) and (valdemar.games == 2).all() and len(valdemar) > 0:
             q_seeds = {}
             for rank in range(1,3):
                 rank_seeds = self.get_seeding(regular_standings.loc[regular_standings['rank'] == rank], regular_standings)
