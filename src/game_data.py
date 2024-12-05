@@ -35,7 +35,8 @@ def break_ties(shared_games, original_standings):
     if len(shared_games) > 0:
         # get new standings
         tiebreak_standings = get_base_standings(shared_games)
-        tiebreak_standings = original_standings[['team']].merge(tiebreak_standings[['team','rank']], on='team').set_index(original_standings.index)
+        original_indices = original_standings.loc[original_standings.team.isin(tiebreak_standings.team), ['team']]
+        tiebreak_standings = original_indices.merge(tiebreak_standings[['team','rank', 'goals','goal_diff']], on='team').set_index(original_indices.index)
 
         # Break ties by points between tied teams
         tiebreak = tiebreak_standings['rank'].astype(int)
@@ -307,6 +308,8 @@ class GameData():
         input_cols = ['rank', 'team', 'games', 'wins', 'extra_points', 'losses', 'points', 'goals', 'opponent_goals']
 
         groups = sorted([g for g in self.standings.sarja.unique() if '-lohko' in g])
+        if len(self.games.KOTI.unique()) == 9 and 'Valdemar' in self.standings.sarja.unique():
+            groups = ['Valdemar'] + groups
         output = {}
         for group in groups:
             output[group] = self.standings.loc[self.standings.sarja == group, input_cols]
@@ -314,8 +317,6 @@ class GameData():
         return output
 
     def render_playoff_games(self):
-        seedings = self.get_seedings()
-
         playoff_games = self.games.loc[~self.games.SARJA.str.contains('lohko')].copy()
         playoff_games.columns = ['sarja','home', 'away','arena','name','game_state']
         playoff_games['name'] = playoff_games['name'].str[:-2]
@@ -325,9 +326,10 @@ class GameData():
         playoff_games = playoff_games[~playoff_games.drop('variable', axis=1).duplicated(keep='first')].copy()
         playoff_games = playoff_games.merge(self.standings, how='left', on=['sarja', 'team'])
         playoff_games = playoff_games.sort_values(['sarja', 'name','variable'], ascending=[True, True, False])
-        playoff_games = playoff_games.pivot(index=['sarja','name'], columns=['variable'], values=['team','wins'])
+        playoff_games = playoff_games.pivot(index=['sarja','name'], columns=['variable'], values=['team','wins', 'rank'])
         playoff_games.columns = ['_'.join(s) for s in playoff_games.columns]
         playoff_games = playoff_games.astype(str)
+
         games_mapping = {
             'Puolivälierät': 4,
             'Sijoitusottelu 5.': 1,
@@ -338,17 +340,23 @@ class GameData():
             'Pronssiottelu': 1,
             'Valdemar': 1
         }
+        if len(self.games.KOTI.unique()) == 9:
+            games_mapping['Valdemar'] = 3
         games_index = []
         for series, n in games_mapping.items():
             for i in range(n):
                 sarjagames = playoff_games[playoff_games.index.get_level_values('sarja') == series]
-                if len(sarjagames) < i+1:
+                if series == 'Valdemar' and len(sarjagames) > 1:
                     games_index.append({
                         'sarja':series,
-                        'name': str('')
+                        'name': sarjagames.index.get_level_values('name')[i]
+                    })
+                elif len(sarjagames) < i+1:
+                    games_index.append({
+                        'sarja':series,
+                        'name': ''
                     })
                 else:
-                    
                     games_index.append({
                         'sarja':series,
                         'name': sarjagames.index.get_level_values('name')[i]
@@ -356,6 +364,15 @@ class GameData():
         playoff_games = pd.DataFrame(games_index).set_index(['sarja', 'name'])\
             .merge(playoff_games, how='left', left_index=True, right_index=True).fillna('')
         playoff_games = playoff_games.sort_values(['sarja', 'name'], ascending=[True, False])
+        
+        if len(self.games.KOTI.unique()) == 9:
+            last_place = playoff_games.loc['Valdemar'].sort_values('rank_home').iloc[-1]['team_home']
+            playoff_games = playoff_games.drop('Valdemar', axis=0)
+            playoff_games = pd.concat([
+                playoff_games, 
+                pd.DataFrame({'team_home':[last_place]}, index=[('Valdemar','')])
+            ]).fillna('')
+            playoff_games.index.names = ['sarja','name']
         return playoff_games
 
     def get_seeding(self, playoff_standings, regular_standings):
@@ -436,7 +453,7 @@ class GameData():
                 rank_seeds = self.get_seeding(regular_standings.loc[regular_standings['rank'] == rank], regular_standings)
                 q_seeds.update({r + (rank - 1) * 3: team for r, team in rank_seeds.items()})
             valdemar_seeding = self.get_seeding(valdemar, regular_standings)
-            q_seeds.update({k+6:v for k, v in valdemar_seeding.items()})
+            q_seeds.update({k+6:v for k, v in valdemar_seeding.items() if k != 3})
             full_seedings['Puolivälierät'] = q_seeds
         return full_seedings
 
@@ -454,9 +471,11 @@ class GameData():
             final_standings.append(sijoitusottelu_7)
 
         valdemar = self.standings.loc[self.standings.sarja == 'Valdemar', ['team','rank']].copy()
-        if len(valdemar) > 0:
-            valdemar['rank'] += 8
+        valdemar['rank'] += 8
+        if len(valdemar) == 2:
             final_standings.append(valdemar)
+        if len(valdemar) == 3:
+            final_standings.append(valdemar.loc[valdemar['rank'] == 9])
 
         pronssi = self.standings.loc[self.standings.sarja == 'Pronssiottelu', ['team','rank']]
         if len(pronssi) > 0:
@@ -467,7 +486,8 @@ class GameData():
         if (len(final) > 0) and (final['wins'].max() == 3):
             final_standings.append(final[['team','rank']])
 
-        base_standings = pd.DataFrame(range(1,11), columns=['rank'])
+        n_teams = len(self.games.KOTI.unique())
+        base_standings = pd.DataFrame(range(1,n_teams+1), columns=['rank'])
         if len(final_standings) == 0:
             final_standings = base_standings
             final_standings['team'] = ''
