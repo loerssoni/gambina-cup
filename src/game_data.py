@@ -409,7 +409,7 @@ class GameData():
         sijoitusottelu_5 = self.standings.loc[(self.standings.sarja == 'Sijoitusotteluvälierät')&(self.standings.wins == 1)]
         if len(sijoitusottelu_5) == 2:
             full_seedings['Sijoitusottelu 5.'] = self.get_seeding(sijoitusottelu_5, regular_standings)
-            sijoitusottelu_7 = self.standings.loc[(self.standings.sarja == 'Sijoitusotteluvälierät')&(self.standings.wins == 1)]
+            sijoitusottelu_7 = self.standings.loc[(self.standings.sarja == 'Sijoitusotteluvälierät')&(self.standings.wins == 0)]
             full_seedings['Sijoitusottelu 7.'] = self.get_seeding(sijoitusottelu_7, regular_standings)
         
         semifinals = self.standings.loc[(self.standings.sarja == 'Puolivälierät')&(self.standings.wins == 3)]
@@ -472,10 +472,12 @@ class GameData():
             final_standings.append(sijoitusottelu_7)
 
         valdemar = self.standings.loc[self.standings.sarja == 'Valdemar', ['team','rank']].copy()
-        valdemar['rank'] += 8
+        
         if len(valdemar) == 2:
+            valdemar['rank'] += 8
             final_standings.append(valdemar)
         if len(valdemar) == 3:
+            valdemar['rank'] += 6
             final_standings.append(valdemar.loc[valdemar['rank'] == 9])
 
         pronssi = self.standings.loc[self.standings.sarja == 'Pronssiottelu', ['team','rank']]
