@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+pd.set_option('future.no_silent_downcasting', True)
 import sheets
 
 def read_players():
@@ -36,40 +36,42 @@ def break_ties(shared_games, original_standings):
         # get new standings
         tiebreak_standings = get_base_standings(shared_games)
         
-        print('Head to head')
         # Break ties by points between tied teams
         tiebreak = tiebreak_standings['rank'].astype(int)
         if tiebreak.nunique() != 1:
             return tiebreak
 
-        print('Goal diff')
         # if still all ties, check goal diff between tied teams
         tiebreak = tiebreak_standings['goal_diff'].rank(method='min', ascending=False)
         if tiebreak.nunique() != 1:
             return tiebreak
-    
-    print('Losses')
+
+    tiebreak = (original_standings['points']).rank(method='min', ascending=False)
+    if tiebreak.nunique() != 1:
+        return tiebreak
+
+
     tiebreak = (original_standings['losses']).rank(method='min', ascending=True)
     if tiebreak.nunique() != 1:
         return tiebreak
     
-    print('Regulation losses')
+
     tiebreak = (original_standings['losses'] - original_standings['extra_points']).rank(method='min', ascending=False)
     if tiebreak.nunique() != 1:
         return tiebreak
 
-    print('Regulation wins')
     # if still all ties, check regulation wins for entire group
+
     tiebreak = original_standings['regulation_wins'].rank(method='min', ascending=False)
     if tiebreak.nunique() != 1:
         return tiebreak
 
-    print('Goal differential')
+
     tiebreak = original_standings['goal_diff'].rank(method='min', ascending=False)
     if tiebreak.nunique() != 1:
         return tiebreak
 
-    print('Goals')
+
     tiebreak = original_standings['goals'].rank(method='min', ascending=False)
     if tiebreak.nunique() != 1:
         return tiebreak
@@ -78,9 +80,12 @@ def break_ties(shared_games, original_standings):
 
 def run_tiebreak(standings, team_goals, no_shared=False):
     for sarja in standings.sarja.unique():
+
         sarjateams = standings.loc[standings.sarja == sarja].copy()
         iters = 0
+
         while sarjateams['rank'].nunique() != len(sarjateams['rank']):
+            previous_rank = sarjateams['rank'].copy()
             for rank in sarjateams['rank'].unique():
                 rank_teams = sarjateams.loc[sarjateams['rank'] == rank]
 
@@ -95,7 +100,6 @@ def run_tiebreak(standings, team_goals, no_shared=False):
                         filtered = filtered & (team_goals['opponent_team'].isin(rank_teams.team))
                         shared_games = team_goals.loc[filtered]
 
-                        print('Breaking ties for rank ', rank)
                         tiebreak = break_ties(shared_games, sarjateams.loc[rank_filter])
                         
                     if tiebreak is None:
@@ -105,9 +109,9 @@ def run_tiebreak(standings, team_goals, no_shared=False):
                     sarjateams.loc[rank_filter, 'tiebreak_rank'] = sarjateams.loc[rank_filter, 'tiebreak_rank'] + tiebreak.values - 1
 
                     sarjateams['rank'] = sarjateams['tiebreak_rank'].copy()
-            iters += 1
-            if iters > 100:
+            if (sarjateams['rank'] == previous_rank).all():
                 break
+
         standings.loc[standings.sarja == sarja, 'rank'] = sarjateams['rank']
     return standings
 
@@ -206,6 +210,7 @@ def get_scoreboard(games, goals, standings, teams):
     team_goals = games_long.merge(team_goals, how='left', on=['SARJA', 'name', 'scoring_team']).drop('variable', axis=1)
     team_goals.columns = ['sarja','game','team','goals','overtime']
     team_goals['goals'] = team_goals['goals'].fillna(0)
+    team_goals['overtime'] = team_goals.groupby('game')['overtime'].transform('max')
 
 
     scoreboard = games[['SARJA','name','KOTI', 'VIERAS', 'game_state']].merge(team_goals, how='left', left_on=['SARJA','name', 'KOTI'], 
@@ -269,7 +274,7 @@ class GameData():
         return self.render_scoreboard(scoreboard)
 
     def get_ended(self):
-        scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'PÄÄTTYNYT')].iloc[-4:]
+        scoreboard = self.scoreboard.loc[(self.scoreboard.game_state == 'PÄÄTTYNYT')]
         return self.render_scoreboard(scoreboard)
     
     def get_upcoming(self):
@@ -293,17 +298,18 @@ class GameData():
         
 
     def render_standings(self):
-        input_cols = ['rank', 'team', 'games', 'wins', 'extra_points', 'losses', 'points']
+        input_cols = ['rank', 'team', 'games', 'wins', 'extra_points', 'losses', 'points', 'goals', 'opponent_goals']
 
         group_a = self.standings.loc[self.standings.sarja == 'A-lohko', input_cols]
         group_b = self.standings.loc[self.standings.sarja == 'B-lohko', input_cols]
         
-        group_a.columns = ['Sija','Joukkue', 'O', 'V', 'LP', 'T', 'P']
-        group_b.columns = ['Sija','Joukkue', 'O', 'V', 'LP', 'T', 'P']
+        group_a.columns = ['Sija','Joukkue', 'O', 'V', 'LP', 'T', 'P', 'TM','PM']
+        group_b.columns = ['Sija','Joukkue', 'O', 'V', 'LP', 'T', 'P', 'TM','PM']
         return group_a, group_b
 
     def render_playoff_games(self):
         seedings = self.get_seedings()
+
         playoff_games = self.games.loc[~self.games.SARJA.str.contains('lohko')].copy()
         playoff_games.columns = ['sarja','home', 'away','arena','name','game_state']
         playoff_games['name'] = playoff_games['name'].str[:-2]
@@ -318,10 +324,10 @@ class GameData():
         playoff_games = playoff_games.astype(str)
         games_mapping = {
             'Puolivälierät': 4,
-            'Sijoitusotteluvälierät': 2,
             'Sijoitusottelu 5.': 1,
-            'Sijoitusottelu 7.'
+            'Sijoitusottelu 7.': 1,
             'Välierät': 2,
+            'Sijoitusotteluvälierät': 2,
             'Finaali': 1,
             'Pronssiottelu': 1,
             'Valdemar': 1
@@ -349,8 +355,10 @@ class GameData():
     def get_seeding(self, playoff_standings, regular_standings):
         original_standings = playoff_standings.copy()
         playoff_standings = playoff_standings[['team']].merge(regular_standings, on='team', how='left')
+        playoff_standings['sarja'] = '-'
         playoff_standings['rank'] = playoff_standings['rank'].transform('rank', method='min').astype(int)
         playoff_standings = run_tiebreak(playoff_standings, None, no_shared=True)
+
         if len(playoff_standings['rank'].unique()) < 4:
             for rank in playoff_standings['rank'].unique():
                 so_qf = playoff_standings[['team']].merge(original_standings, on='team', how='left')
@@ -370,31 +378,28 @@ class GameData():
         regular_standings = self.standings.loc[self.standings.sarja.str.contains('lohko')]
 
         finals = self.standings.loc[(self.standings.sarja == 'Välierät')&(self.standings.wins == 3)]
-        if len(finals) == 2 and 'Finaali' not in scheduled_series:
-            seedings['Finaali'] = self.get_seeding(finals, regular_standings)
+        if len(finals) == 2 and 'Finaali':
+            full_seedings['Finaali'] = self.get_seeding(finals, regular_standings)
             pronssi = self.standings.loc[(self.standings.sarja == 'Välierät')&(self.standings.wins < 3)]
-            seedings['Pronssiottelu'] = self.get_seeding(pronssi, regular_standings)
-            full_seedings.update(seedings)
+            full_seedings['Pronssiottelu'] = self.get_seeding(pronssi, regular_standings)
 
         sijoitusottelu_5 = self.standings.loc[(self.standings.sarja == 'Sijoitusotteluvälierät')&(self.standings.wins == 1)]
-        if len(sijoitusottelu_5) == 2 and 'Sijoitusottelu 5.'  not in scheduled_series:
-            seedings['Sijoitusottelu 5.'] = self.get_seeding(sijoitusottelu_5, regular_standings)
+        if len(sijoitusottelu_5) == 2:
+            full_seedings['Sijoitusottelu 5.'] = self.get_seeding(sijoitusottelu_5, regular_standings)
             sijoitusottelu_7 = self.standings.loc[(self.standings.sarja == 'Sijoitusotteluvälierät')&(self.standings.wins == 1)]
-            seedings['Sijoitusottelu 7.'] = self.get_seeding(sijoitusottelu_7, regular_standings)
-            full_seedings.update(seedings)
+            full_seedings['Sijoitusottelu 7.'] = self.get_seeding(sijoitusottelu_7, regular_standings)
         
         semifinals = self.standings.loc[(self.standings.sarja == 'Puolivälierät')&(self.standings.wins == 3)]
-        if len(semifinals) == 4 and 'Välierät' not in scheduled_series:
-            seedings['Välierät']  = self.get_seeding(semifinals, regular_standings)
+        if len(semifinals) == 4:
+            full_seedings['Välierät']  = self.get_seeding(semifinals, regular_standings)
 
         
         sijoitussemit = self.standings.loc[(self.standings.sarja == 'Puolivälierät')&(self.standings.wins < 3)]
-        if len(sijoitussemit) == 4 and 'Sijoitusotteluvälierät' not in scheduled_series:
-            seedings['Sijoitusotteluvälierät'] = self.get_seeding(sijoitussemit, regular_standings)
-            full_seedings.update(seedings)
+        if len(sijoitussemit) == 4:
+            full_seedings['Sijoitusotteluvälierät'] = self.get_seeding(sijoitussemit, regular_standings)
         
 
-        if (regular_standings.games == 4).all() and 'Puolivälierät' not in scheduled_series:
+        if (regular_standings.games == 4).all():
             a = regular_standings[regular_standings.sarja == 'A-lohko'].sort_values('rank').reset_index(drop=True)
             a.index += 1
             a = a['team'].to_dict()
@@ -442,6 +447,12 @@ class GameData():
         if (len(final) > 0) and (final['wins'].max() == 3):
             final_standings.append(final)
 
-        final_standings = pd.DataFrame(range(1,11), columns=['rank']).merge(pd.concat(final_standings), how='left', on='rank')
-        final_standings = final_standings.fillna('')
+        base_standings = pd.DataFrame(range(1,11), columns=['rank'])
+        if len(final_standings) == 0:
+            final_standings = base_standings
+            final_standings['team'] = ''
+        else:
+            final_standings = base_standings.merge(pd.concat(final_standings), how='left', on='rank')
+            final_standings = final_standings.fillna('')
+        final_standings.columns = ['', 'Joukkue']
         return final_standings

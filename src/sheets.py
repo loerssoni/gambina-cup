@@ -199,19 +199,21 @@ def read_game_data(schedule):
 
 
 def get_new_schedule_rows(data):
+    scheduled_series = data.games.SARJA.unique()
     new_rows = []
     for sarja, seeds in data.get_seedings().items():
-        for i in range(0, len(seeds)//2):
-            if sarja not in ['Puolivälierät', 'Välierät', 'Finaali'] and i > 0:
-                pass
-            else:
-                new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
+        if sarja not in scheduled_series:
+            for i in range(0, len(seeds)//2):
+                if sarja not in ['Puolivälierät', 'Sijoitusotteluvälierät', 'Välierät', 'Finaali'] and i % 2 == 0:
+                    pass
+                else:
+                    new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
 
-        if sarja in ['Puolivälierät', 'Välierät', 'Finaali']:
-            for i in range(len(seeds)//2):
-                new_rows.append([sarja, seeds[len(seeds)-i], seeds[i+1], 'Ei valittu'])
-            for i in range(len(seeds)//2):
-                new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
+            if sarja in ['Puolivälierät', 'Sijoitusotteluvälierät',  'Välierät', 'Finaali']:
+                for i in range(len(seeds)//2):
+                    new_rows.append([sarja, seeds[len(seeds)-i], seeds[i+1], 'Ei valittu'])
+                for i in range(len(seeds)//2):
+                    new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
     return new_rows
 
 def update_schedule():

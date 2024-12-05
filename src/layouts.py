@@ -22,7 +22,7 @@ def get_games_elements(games):
                 style={'marginBottom': '1px', 'alignItems':'center'}
         ),]
         if game['record_h2h'] == '':
-            score_subitem = game['SARJA']
+            score_subitem = ''
         else:
             score_subitem = game['record_h2h']
         record_style = {'display': 'flex', 'justifyContent': 'center', 'fontSize':'14px'}

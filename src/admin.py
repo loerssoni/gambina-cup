@@ -4,7 +4,7 @@ from google.cloud import secretmanager
 import sheets
 from datetime import datetime
 import pytz
-
+import os
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
@@ -13,7 +13,9 @@ app.title = "Gambina Cup admin"
 # Function to get the secret password from GCP Secret Manager
 def get_secret_password(secret_name="projects/gambina-cup/secrets/admin-password/versions/latest"):
     # Initialize the Secret Manager client
-    client = secretmanager.SecretManagerServiceClient()
+    key_path = 'secrets/sheet-reader-key.json'
+    secret_file = os.path.join(os.getcwd(), key_path)
+    client = secretmanager.SecretManagerServiceClient.from_service_account_file(secret_file)
     
     # Access the secret
     response = client.access_secret_version(name=secret_name)
