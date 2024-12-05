@@ -446,14 +446,15 @@ class GameData():
         if (n_teams == 9) and (regular_standings.games == 4).all():
             full_seedings['Valdemar'] = self.get_seeding(regular_standings.loc[regular_standings['rank'] == 3], regular_standings)
 
-        valdemar = self.standings.loc[(self.standings.sarja == 'Valdemar')] 
+        valdemar = self.standings.loc[(self.standings.sarja == 'Valdemar')]
         if (n_teams == 9) and (valdemar.games == 2).all() and len(valdemar) > 0:
             q_seeds = {}
             for rank in range(1,3):
                 rank_seeds = self.get_seeding(regular_standings.loc[regular_standings['rank'] == rank], regular_standings)
                 q_seeds.update({r + (rank - 1) * 3: team for r, team in rank_seeds.items()})
-            valdemar_seeding = self.get_seeding(valdemar, regular_standings)
-            q_seeds.update({k+6:v for k, v in valdemar_seeding.items() if k != 3})
+
+            q_seeds[7] = valdemar.loc[valdemar['rank'] == 1, 'team'].iloc[0]
+            q_seeds[8] = valdemar.loc[valdemar['rank'] == 2, 'team'].iloc[0]
             full_seedings['Puolivälierät'] = q_seeds
         return full_seedings
 
