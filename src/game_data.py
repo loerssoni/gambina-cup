@@ -35,32 +35,37 @@ def break_ties(shared_games, original_standings):
     if len(shared_games) > 0:
         # get new standings
         tiebreak_standings = get_base_standings(shared_games)
-        
+        tiebreak_standings = original_standings[['team']].merge(tiebreak_standings[['team','rank']], on='team').set_index(original_standings.index)
+
         # Break ties by points between tied teams
         tiebreak = tiebreak_standings['rank'].astype(int)
         if tiebreak.nunique() != 1:
-            return tiebreak            
+            return tiebreak
 
         # if still all ties, check goal diff between tied teams
         tiebreak = tiebreak_standings['goal_diff'].rank(method='min', ascending=False)
         if tiebreak.nunique() != 1:
             return tiebreak
 
+        tiebreak = tiebreak_standings['goals'].rank(method='min', ascending=False)
+        if tiebreak.nunique() != 1:
+            return tiebreak
+
     tiebreak = (original_standings['points']).rank(method='min', ascending=False)
     if tiebreak.nunique() != 1:
         return tiebreak
-
+        
+    tiebreak = original_standings['wins'].rank(method='min', ascending=False)
+    if tiebreak.nunique() != 1:
+        return tiebreak
 
     tiebreak = (original_standings['losses']).rank(method='min', ascending=True)
     if tiebreak.nunique() != 1:
         return tiebreak
-    
 
     tiebreak = (original_standings['losses'] - original_standings['extra_points']).rank(method='min', ascending=False)
     if tiebreak.nunique() != 1:
         return tiebreak
-
-    # if still all ties, check regulation wins for entire group
 
     tiebreak = original_standings['regulation_wins'].rank(method='min', ascending=False)
     if tiebreak.nunique() != 1:
@@ -83,7 +88,7 @@ def run_tiebreak(standings, team_goals, no_shared=False):
 
         sarjateams = standings.loc[standings.sarja == sarja].copy()
         iters = 0
-
+        
         while sarjateams['rank'].nunique() != len(sarjateams['rank']):
             previous_rank = sarjateams['rank'].copy()
             for rank in sarjateams['rank'].unique():
@@ -101,14 +106,15 @@ def run_tiebreak(standings, team_goals, no_shared=False):
                         shared_games = team_goals.loc[filtered]
 
                         tiebreak = break_ties(shared_games, sarjateams.loc[rank_filter])
-                        
+                    
                     if tiebreak is None:
                         break
-                    sarjateams['tiebreak_rank'] = sarjateams['rank'].copy()
-
+                    
+                    sarjateams['tiebreak_rank'] = sarjateams['rank'].copy()                    
                     sarjateams.loc[rank_filter, 'tiebreak_rank'] = sarjateams.loc[rank_filter, 'tiebreak_rank'] + tiebreak.values - 1
 
                     sarjateams['rank'] = sarjateams['tiebreak_rank'].copy()
+
             if (sarjateams['rank'] == previous_rank).all():
                 break
 
