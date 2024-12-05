@@ -197,23 +197,42 @@ def read_game_data(schedule):
         
     return pd.DataFrame(metadata_rows), goals
 
-
 def get_new_schedule_rows(data):
-    scheduled_series = data.games.SARJA.unique()
-    new_rows = []
-    for sarja, seeds in data.get_seedings().items():
-        if sarja not in scheduled_series:
-            for i in range(0, len(seeds)//2):
-                if sarja not in ['Puolivälierät', 'Sijoitusotteluvälierät', 'Välierät', 'Finaali'] and i % 2 == 0:
-                    pass
-                else:
-                    new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
+    series_wins = {
+                'Puolivälierät': 3,
+                'Sijoitusottelu 5.': 1,
+                'Sijoitusottelu 7.': 1,
+                'Välierät': 3,
+                'Sijoitusotteluvälierät': 1,
+                'Finaali': 3,
+                'Pronssiottelu': 1,
+                'Valdemar': 1
+    }
+    games_scheduled = pd.melt(data.games, id_vars='SARJA', value_vars=['KOTI','VIERAS'])
+    games_scheduled.columns = ['sarja','var','team']
+    games_scheduled = games_scheduled[['sarja','team']].value_counts().reset_index()
 
-            if sarja in ['Puolivälierät', 'Sijoitusotteluvälierät',  'Välierät', 'Finaali']:
-                for i in range(len(seeds)//2):
-                    new_rows.append([sarja, seeds[len(seeds)-i], seeds[i+1], 'Ei valittu'])
-                for i in range(len(seeds)//2):
-                    new_rows.append([sarja, seeds[i+1], seeds[len(seeds)-i], 'Ei valittu'])
+    seedings = pd.melt(pd.DataFrame(data.get_seedings()), ignore_index=False).dropna()
+    seedings.columns = ['sarja','team']
+    seedings = seedings.merge(data.standings[['sarja','team', 'wins','losses']], how='left').set_index(seedings.index)
+    seedings = seedings.merge(games_scheduled, how='left').set_index(seedings.index)
+    seedings[['wins','losses', 'count']] = seedings[['wins','losses','count']].fillna(0).astype(int)
+    seedings['series_wins'] = seedings.sarja.replace(series_wins)
+    seedings['required_games'] = seedings['series_wins'] + seedings[['wins','losses']].min(axis=1)
+
+    new_rows = []
+    for sarja in seedings.sarja.unique():
+        sarja_seeds = seedings.loc[seedings.sarja == sarja]
+
+        for i in range(6):
+            for seed in range(1, len(sarja_seeds)//2 + 1):
+                top_seed = sarja_seeds.loc[seed, 'team']
+                lower_seed = sarja_seeds.loc[len(sarja_seeds) - seed + 1, 'team']
+                if sarja_seeds.loc[seed, 'required_games'] >= i > sarja_seeds.loc[seed, 'count']:
+                    if i % 2:    
+                        new_rows.append([sarja, top_seed, lower_seed, 'Ei valittu'])
+                    else:
+                        new_rows.append([sarja, lower_seed, top_seed, 'Ei valittu'])
     return new_rows
 
 def update_schedule():
