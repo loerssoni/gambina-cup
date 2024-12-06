@@ -366,6 +366,16 @@ class GameData():
         playoff_games = playoff_games.sort_values(['sarja', 'name'], ascending=[True, False])
         
         if len(self.games.KOTI.unique()) == 9:
+            if 'rank_home' not in playoff_games.columns:
+                playoff_games['rank_home'] = 1
+            if 'team_home' not in playoff_games.columns:
+                playoff_games['team_home'] = ''
+            if 'wins_home' not in playoff_games.columns:
+                playoff_games['wins_home'] = ''
+            if 'team_away' not in playoff_games.columns:
+                playoff_games['team_away'] = ''
+            if 'wins_away' not in playoff_games.columns:
+                playoff_games['wins_away'] = ''
             last_place = playoff_games.loc['Valdemar'].sort_values('rank_home').iloc[-1]['team_home']
             playoff_games = playoff_games.drop('Valdemar', axis=0)
             playoff_games = pd.concat([
